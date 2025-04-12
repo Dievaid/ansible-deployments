@@ -1,0 +1,32 @@
+- name: Run Docker container using an image
+  hosts: "*"
+  become: yes
+  vars:
+    pg_user: "{{ pg_user }}"
+    pg_password: "{{ pg_password }}"
+    pg_db: "{{ pg_db }}"  
+  tasks:
+    - name: Ensure Docker is running
+      service:
+        name: snap.docker.dockerd.service
+        state: started
+        enabled: yes
+
+    - name: Pull the latest PostgreSQL docker image
+      shell: docker pull postgres:latest
+
+    - name: Stop old PostgreSQL container if exists
+      shell: docker stop postgres_container || true
+
+    - name: Remove old PostgreSQL container if exists
+      shell: docker rm postgres_container || true
+
+    - name: Run PostgreSQL container
+      command: >
+        docker run -d
+        --name postgres_container
+        -e POSTGRES_USER={{ pg_user }}
+        -e POSTGRES_PASSWORD={{ pg_password }}
+        -e POSTGRES_DB={{ pg_db }}
+        -p 5432:5432
+        postgres:latest

@@ -1,4 +1,4 @@
-- name: Run Docker container using an image
+- name: Deploy database
   hosts: "*"
   become: yes
   vars:
@@ -30,3 +30,6 @@
         -e POSTGRES_DB={{ pg_db }}
         -p 5432:5432
         postgres:latest
+    
+    - name: Assign hostname in network
+      shell: docker network connect --alias database shared postgres_container

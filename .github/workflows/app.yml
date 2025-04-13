@@ -1,0 +1,49 @@
+name: Deploy Feeds-App Container
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKER_PWD: ${{ secrets.DOCKER_PWD }}
+
+    steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Ansible & dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Run Ansible Playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          ansible-playbook playbooks/deploy-app.yml \
+            -i inventory/app-hosts \
+            -e "pg_user=${POSTGRES_USER}" \
+            -e "pg_password=${POSTGRES_PASSWORD}" \
+            -e "pg_db=${POSTGRES_DB}" \
+            -e "pg_host=${POSTGRES_HOST}" \
+            -e "docker_user=${DOCKER_USER}" \
+            -e "docker_pwd=${DOCKER_PWD}"

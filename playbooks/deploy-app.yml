@@ -1,0 +1,40 @@
+- name: Deploy feeds application
+  hosts: "*"
+  become: yes
+  vars:
+    pg_user: "{{ pg_user }}"
+    pg_password: "{{ pg_password }}"
+    pg_db: "{{ pg_db }}" 
+    pg_host: "{{ pg_host }}"
+    docker_user: "{{ docker_user }}"
+    docker_pwd: "{{ docker_pwd }}"
+  tasks:
+    - name: Ensure Docker is running
+      service:
+        name: snap.docker.dockerd.service
+        state: started
+        enabled: yes
+
+    - name: Connect to container registry
+      command: docker login frontier.go.ro:5000 -u {{ docker_user }} -p {{ docker_pwd }}
+
+    - name: Pull the latest app docker image
+      shell: docker pull frontier.go.ro:5000/feeds-app:latest
+
+    - name: Stop old app container if exists
+      shell: docker stop feeds-app-container || true
+
+    - name: Remove old app container if exists
+      shell: docker rm feeds-app-container || true
+
+    - name: Run app container
+      command: >
+        docker run -d
+        --name feeds-app-container
+        --network=shared
+        frontier.go.ro:5000/feeds-app:latest
+        -e POSTGRES_USER={{ pg_user }}
+        -e POSTGRES_PASSWORD={{ pg_password }}
+        -e POSTGRES_DB={{ pg_db }}
+        -e POSTGRES_HOST={{ pg_host }}
+        -p 9229:9229
